@@ -156,8 +156,6 @@
     .mov-item a:hover {
       text-decoration: underline;
     }
-
-    /* Modal de comprobante */
     .modal {
       display: none;
       position: fixed;
@@ -209,8 +207,6 @@
     .modal-actions button {
       flex: 1;
     }
-
-    /* Login screens */
     .login-screen {
       display: none;
       width: 100%;
@@ -302,9 +298,9 @@
   </div>
 
   <script>
-    // 🔑 CONFIGURACIÓN DE SUPABASE — ¡REEMPLAZA ESTOS VALORES!
-    const supabaseUrl = 'https://TU_PROYECTO.supabase.co';
-    const supabaseAnonKey = 'TU_ANON_KEY';
+    // 🔑 CONFIGURACIÓN REAL DE SUPABASE
+    const supabaseUrl = 'https://kirlnjbtkohgfaocpolu.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpcmxuamJ0a29oZ2Zhb2Nwb2x1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgxOTIxNzYsImV4cCI6MjA0Mzc2ODE3Nn0.ZZRnudCla2bBzNwV4N7MhlgN1n7vWV3RwQG3d3n2lLk';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
     // API del backend Flask
@@ -381,10 +377,8 @@
           return;
         }
 
-        // ✅ AUTENTICACIÓN EXITOSA
         localStorage.setItem('nequi_user', telefonoActual);
 
-        // 👇 SI ES EL ADMIN, REDIRIGE A home.html
         if (telefonoActual === '3243176042') {
           window.location.href = 'home.html';
         } else {
@@ -463,13 +457,11 @@
 
         if (!data.success) throw new Error(data.error || "Error desconocido");
 
-        // Mostrar modal
         const modalImg = document.getElementById("modalImg");
         const modal = document.getElementById("comprobanteModal");
         modalImg.src = `${API_BASE}${data.comprobante.url}`;
         modal.style.display = "flex";
 
-        // Guardar en localStorage
         let movs = JSON.parse(localStorage.getItem("movimientos") || "[]");
         movs.unshift({
           fecha: data.comprobante.fecha,
@@ -531,7 +523,6 @@
       link.click();
     }
 
-    // Al cargar
     window.onload = () => {
       const user = localStorage.getItem('nequi_user');
       if (user) {
