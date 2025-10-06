@@ -1,117 +1,92 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel de Administración</title>
+  <title>Admin - Nequi Generator PRO</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg: #0b0b0b;
-      --surface: #151515;
-      --line: #252525;
+      --bg: #0a0a0a;
+      --surface: #111;
+      --line: #222;
       --accent: #00f0ff;
       --text: #f2f2f2;
       --sub: #888;
-      --error: #ff4d4d;
       --ok: #00ff88;
+      --error: #ff4d4d;
     }
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: system-ui, sans-serif;
+      font-family: 'Segoe UI', sans-serif;
     }
     body {
       background: var(--bg);
       color: var(--text);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 2rem 1rem;
+      padding: 2rem;
       min-height: 100vh;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 2rem;
+      font-size: 2rem;
+      background: linear-gradient(90deg, var(--accent), #ff00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
     .card {
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: 16px;
       padding: 1.5rem;
-      width: 100%;
+      margin-bottom: 2rem;
       max-width: 600px;
-      margin-bottom: 1rem;
+      margin-inline: auto;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.1);
     }
-    h1 {
-      font-size: 1.6rem;
-      margin-bottom: 1.5rem;
-      text-align: center;
-      background: linear-gradient(90deg, var(--accent), #ff00ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    label {
-      display: block;
-      margin: 0.5rem 0 0.3rem;
-      color: var(--sub);
-      font-size: 0.9rem;
-    }
-    input {
+    input, button {
       width: 100%;
-      padding: 0.7rem;
-      border: 1px solid var(--line);
+      padding: 0.75rem;
+      margin-bottom: 1rem;
       border-radius: 8px;
-      background: #0f0f0f;
+      border: 1px solid var(--line);
+      background: #0a0a0a;
       color: var(--text);
-      font-size: 1rem;
     }
     button {
-      width: 100%;
-      padding: 0.8rem;
-      margin-top: 1rem;
-      border: none;
-      border-radius: 12px;
       background: var(--accent);
       color: #000;
-      font-weight: 700;
+      font-weight: bold;
+      border: none;
       cursor: pointer;
+      transition: all 0.2s ease;
     }
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    button:hover {
+      box-shadow: 0 0 15px var(--accent);
     }
-    .error {
-      color: var(--error);
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
-    }
-    .success {
-      color: var(--ok);
-      font-size: 0.9rem;
-      margin-top: 0.5rem;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 1rem;
-    }
-    th, td {
-      padding: 0.7rem;
-      text-align: left;
+    .user-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0c0c0c;
+      padding: 1rem;
+      border-radius: 12px;
+      margin-bottom: 1rem;
       border: 1px solid var(--line);
     }
-    th {
-      background: var(--line);
+    .user-item button {
+      width: auto;
+      margin: 0;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
     }
-    .status {
-      padding: 0.3rem 0.6rem;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      font-weight: 600;
-    }
-    .status-activo {
+    .activo {
       background: var(--ok);
       color: #000;
     }
-    .status-inactivo {
+    .inactivo {
       background: var(--error);
       color: #fff;
     }
@@ -121,233 +96,102 @@
   </style>
 </head>
 <body>
-  <!-- Pantalla de login -->
-  <div id="login-screen" class="card">
-    <h1>🔒 Iniciar Sesión</h1>
-    <label>Número (10 dígitos)</label>
-    <input type="tel" id="login-telefono" maxlength="10" placeholder="3101234567" autocomplete="off">
-    <label>PIN (4 dígitos)</label>
-    <input type="password" id="login-pin" maxlength="4" placeholder="1234" autocomplete="off">
-    <button onclick="iniciarSesion()">Ingresar</button>
-    <div id="mensaje-login" class="hidden"></div>
+
+  <h1>🔧 Panel de Administrador</h1>
+
+  <div class="card">
+    <h2>Agregar Nuevo Usuario</h2>
+    <input type="tel" id="newTelefono" placeholder="Número (10 dígitos)" maxlength="10">
+    <input type="text" id="newPin" placeholder="PIN (4 dígitos)" maxlength="4">
+    <button onclick="agregarUsuario()">Agregar Usuario</button>
   </div>
 
-  <!-- Panel principal (oculto hasta que inicie sesión) -->
-  <div id="panel-admin" class="card" style="display: none;">
-    <h1>🔒 Panel de Administración</h1>
-    <p>Administra usuarios desde aquí</p>
-    <button onclick="logout()">Cerrar sesión</button>
-  </div>
-
-  <div id="panel-agregar" class="card" style="display: none;">
-    <h2>➕ Agregar Usuario</h2>
-    <label>Número (10 dígitos)</label>
-    <input type="tel" id="nuevo-telefono" maxlength="10" placeholder="3101234567" autocomplete="off">
-    <label>PIN (4 dígitos)</label>
-    <input type="password" id="nuevo-pin" maxlength="4" placeholder="1234" autocomplete="off">
-    <button onclick="agregarUsuario()">Agregar usuario</button>
-    <div id="mensaje-agregar" class="hidden"></div>
-  </div>
-
-  <div id="panel-usuarios" class="card" style="display: none;">
-    <h2>👥 Usuarios Registrados</h2>
-    <div id="usuarios-lista">
-      <p>Cargando...</p>
-    </div>
+  <div class="card">
+    <h2>Usuarios Registrados</h2>
+    <div id="userList">Cargando...</div>
   </div>
 
   <script>
-    // 🔑 CONFIGURACIÓN DE SUPABASE — ¡REEMPLAZA ESTOS VALORES!
-    const supabaseUrl = 'https://a48i72572-dev.supabase.co'; // 👈 TU URL REAL
-    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImE0OGk3MjU3Mi1kZXYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczMDQxNjg5MSwiZXhwIjoyMDQ1OTkyODkxfQ.XXXXXXX'; // 👈 TU CLAVE REAL
+    // 🔑 CONFIGURACIÓN SUPABASE
+    const supabaseUrl = 'https://kirlnjbtkohgfaocpolu.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpcmxuamJ0a29oZ2Zhb2Nwb2x1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjgxOTIxNzYsImV4cCI6MjA0Mzc2ODE3Nn0.ZZRnudCla2bBzNwV4N7MhlgN1n7vWV3RwQG3d3n2lLk';
     const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-    // Función para iniciar sesión
-    async function iniciarSesion() {
-      const tel = document.getElementById('login-telefono').value.trim();
-      const pin = document.getElementById('login-pin').value.trim();
-      const mensaje = document.getElementById('mensaje-login');
+    const adminTelefono = '3243176042';
 
-      if (!/^\d{10}$/.test(tel)) {
-        mostrarMensaje('mensaje-login', 'Número debe tener 10 dígitos', false);
+    window.onload = () => {
+      const user = localStorage.getItem('nequi_user');
+      if (user !== adminTelefono) {
+        alert("❌ Acceso denegado. Solo administradores.");
+        window.location.href = 'index.html';
         return;
       }
-
-      if (!/^\d{4}$/.test(pin)) {
-        mostrarMensaje('mensaje-login', 'PIN debe tener 4 dígitos', false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('user')
-          .select('*')
-          .eq('telefono', tel)
-          .eq('pin', pin)
-          .maybeSingle(); // Solo uno o ninguno
-
-        if (error) throw error;
-
-        if (!data) {
-          mostrarMensaje('mensaje-login', 'Número o PIN incorrectos', false);
-          return;
-        }
-
-        if (!data.activo) {
-          mostrarMensaje('mensaje-login', 'Usuario inactivo', false);
-          return;
-        }
-
-        // Guardar en localStorage para mantener la sesión
-        localStorage.setItem('usuario_autenticado', tel);
-        mostrarMensaje('mensaje-login', '✅ Bienvenido!', true);
-
-        // Mostrar panel
-        document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('panel-admin').style.display = 'block';
-        document.getElementById('panel-agregar').style.display = 'block';
-        document.getElementById('panel-usuarios').style.display = 'block';
-
-        cargarUsuarios();
-
-      } catch (e) {
-        mostrarMensaje('mensaje-login', 'Error al iniciar sesión', false);
-      }
-    }
+      cargarUsuarios();
+    };
 
     async function cargarUsuarios() {
-      const { data, error } = await supabase
+      const { data, error } = await supabase.from('user').select('*').order('created_at', { ascending: false });
+      if (error) {
+        console.error("Error al cargar usuarios:", error);
+        return;
+      }
+      const list = document.getElementById('userList');
+      list.innerHTML = '';
+      data.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'user-item';
+        div.innerHTML = `
+          <div>
+            <strong>${u.telefono}</strong><br>
+            PIN: ${u.pin} | Estado: ${u.activo ? '✅ Activo' : '❌ Inactivo'}
+          </div>
+          <button class="${u.activo ? 'inactivo' : 'activo'}" onclick="toggleEstado('${u.telefono}', ${!u.activo})">
+            ${u.activo ? 'Desactivar' : 'Activar'}
+          </button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    async function toggleEstado(telefono, nuevoEstado) {
+      const { error } = await supabase
         .from('user')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .update({ activo: nuevoEstado })
+        .eq('telefono', telefono);
 
       if (error) {
-        document.getElementById('usuarios-lista').innerHTML = `<p class="error">Error al cargar usuarios</p>`;
+        alert("Error al actualizar estado.");
         return;
       }
-
-      if (data.length === 0) {
-        document.getElementById('usuarios-lista').innerHTML = `<p>No hay usuarios registrados</p>`;
-        return;
-      }
-
-      let html = `
-        <table>
-          <thead>
-            <tr>
-              <th>Número</th>
-              <th>Fecha</th>
-              <th>Estado</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      data.forEach(u => {
-        const estadoClass = u.activo ? 'status-activo' : 'status-inactivo';
-        const estadoText = u.activo ? 'Activo' : 'Inactivo';
-        html += `
-          <tr>
-            <td>${u.telefono}</td>
-            <td>${new Date(u.created_at).toLocaleString()}</td>
-            <td><span class="status ${estadoClass}">${estadoText}</span></td>
-            <td>
-              <button onclick="toggleEstado('${u.id}', ${u.activo})">${u.activo ? 'Desactivar' : 'Activar'}</button>
-            </td>
-          </tr>
-        `;
-      });
-
-      html += `</tbody></table>`;
-      document.getElementById('usuarios-lista').innerHTML = html;
+      cargarUsuarios();
     }
 
     async function agregarUsuario() {
-      const tel = document.getElementById('nuevo-telefono').value.trim();
-      const pin = document.getElementById('nuevo-pin').value.trim();
-      const mensaje = document.getElementById('mensaje-agregar');
+      const telefono = document.getElementById('newTelefono').value.trim();
+      const pin = document.getElementById('newPin').value.trim();
 
-      if (!/^\d{10}$/.test(tel)) {
-        mostrarMensaje('mensaje-agregar', 'Número debe tener 10 dígitos', false);
+      if (!/^\d{10}$/.test(telefono)) {
+        alert("Número debe tener 10 dígitos.");
         return;
       }
-
       if (!/^\d{4}$/.test(pin)) {
-        mostrarMensaje('mensaje-agregar', 'PIN debe tener 4 dígitos', false);
+        alert("PIN debe tener 4 dígitos.");
         return;
       }
 
-      try {
-        const { data, error } = await supabase
-          .from('user')
-          .insert({ telefono: tel, pin: pin, activo: true })
-          .select();
+      const { error } = await supabase
+        .from('user')
+        .insert([{ telefono, pin, activo: true }]);
 
-        if (error) throw error;
-
-        mostrarMensaje('mensaje-agregar', 'Usuario agregado correctamente', true);
-        document.getElementById('nuevo-telefono').value = '';
-        document.getElementById('nuevo-pin').value = '';
-        cargarUsuarios();
-      } catch (e) {
-        mostrarMensaje('mensaje-agregar', 'Error al agregar usuario', false);
+      if (error) {
+        alert("Error al agregar usuario. ¿Ya existe?");
+        return;
       }
+
+      document.getElementById('newTelefono').value = '';
+      document.getElementById('newPin').value = '';
+      cargarUsuarios();
     }
-
-    async function toggleEstado(id, estadoActual) {
-      try {
-        const { data, error } = await supabase
-          .from('user')
-          .update({ activo: !estadoActual })
-          .eq('id', id)
-          .select();
-
-        if (error) throw error;
-
-        cargarUsuarios();
-      } catch (e) {
-        alert('Error al cambiar estado');
-      }
-    }
-
-    function mostrarMensaje(id, msg, success = true) {
-      const div = document.getElementById(id);
-      div.textContent = msg;
-      div.className = success ? "success" : "error";
-      div.classList.remove("hidden");
-      setTimeout(() => div.classList.add("hidden"), 5000);
-    }
-
-    function logout() {
-      localStorage.removeItem('usuario_autenticado');
-      window.location.reload(); // Recarga para volver al login
-    }
-
-    // Verificar si ya hay sesión activa
-    window.onload = function() {
-      const usuario = localStorage.getItem('usuario_autenticado');
-      if (usuario) {
-        // Verificar si el usuario sigue activo
-        supabase
-          .from('user')
-          .select('activo')
-          .eq('telefono', usuario)
-          .maybeSingle()
-          .then(({ data, error }) => {
-            if (error || !data || !data.activo) {
-              localStorage.removeItem('usuario_autenticado');
-              return;
-            }
-            // Mostrar panel
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('panel-admin').style.display = 'block';
-            document.getElementById('panel-agregar').style.display = 'block';
-            document.getElementById('panel-usuarios').style.display = 'block';
-            cargarUsuarios();
-          });
-      }
-    };
   </script>
 </body>
 </html>
