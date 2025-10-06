@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nequi Generator PRO</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0b0b0b;
+      --surface: #151515;
+      --line: #252525;
+      --accent: #00f0ff;
+      --text: #f2f2f2;
+      --sub: #888;
+      --error: #ff4d4d;
+      --ok: #00ff88;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 400px;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      background: linear-gradient(90deg, var(--accent), #ff00ff);
+      -webkit-background-clip: text;
+      background-clip: text; /* ✅ Propiedad estándar añadida */
+      -webkit-text-fill-color: transparent;
+      color: transparent; /* Fallback para navegadores que no soportan -webkit-text-fill-color */
+    }
+    label {
+      display: block;
+      margin: 0.5rem 0 0.3rem;
+      color: var(--sub);
+      font-size: 0.9rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.7rem;
+      border: 1px solid(var(--line));
+      border-radius: 8px;
+      background: #0f0f0f;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      margin-top: 1rem;
+      border: none;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .error {
+      color: var(--error);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    .screen {
+      display: none;
+    }
+    .screen.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <!-- LOGIN POR NÚMERO -->
+  <div id="login-numero" class="screen active">
+    <div class="card">
+      <h1>🔐 Acceso</h1>
+      <label>Tu número (10 dígitos)</label>
+      <input type="tel" id="telefono" maxlength="10" placeholder="3101234567" autocomplete="off">
+      <button onclick="validarNumero()">Continuar</button>
+      <div id="error-numero" class="error"></div>
+    </div>
+  </div>
+
+  <!-- LOGIN POR PIN -->
+  <div id="login-pin" class="screen">
+    <div class="card">
+      <h1>🔢 Ingresa tu PIN</h1>
+      <label>PIN de 4 dígitos</label>
+      <input type="password" id="pin" maxlength="4" placeholder="1234" autocomplete="off">
+      <button onclick="validarPin()">Ingresar</button>
+      <button style="background:#444;margin-top:0.5rem;" onclick="volverANumero()">← Cambiar número</button>
+      <div id="error-pin" class="error"></div>
+    </div>
+  </div>
+
+  <!-- APP PRINCIPAL (se carga después del login) -->
+  <div id="app" class="screen">
+    <!-- Aquí irá tu app actual (generar, movimientos, etc.) -->
+    <div class="card">
+      <h1>Nequi Generator PRO</h1>
+      <p>¡Bienvenido! Estás autenticado.</p>
+      <button onclick="logout()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <script>
+    // 🔑 CONFIGURACIÓN DE SUPABASE — ¡REEMPLAZA ESTOS VALORES!
+    const supabaseUrl = 'https://TU_PROYECTO.supabase.co';
+    const supabaseAnonKey = 'TU_ANON_KEY';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    let telefonoActual = '';
+
+    function mostrarError(id, msg) {
+      document.getElementById(id).textContent = msg;
+      setTimeout(() => document.getElementById(id).textContent = '', 3000);
+    }
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    async function validarNumero() {
+      const tel = document.getElementById('telefono').value.trim();
+      const errorDiv = document.getElementById('error-numero');
+      
+      if (!/^\d{10}$/.test(tel)) {
+        mostrarError('error-numero', 'Ingresa 10 dígitos');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user')
+          .select('telefono, pin')
+          .eq('telefono', tel)
+          .eq('activo', true)
+          .single();
+
+        if (error || !data) {
+          mostrarError('error-numero', 'Número no autorizado');
+          return;
+        }
+
+        telefonoActual = tel;
+        showScreen('login-pin');
+        document.getElementById('pin').focus();
+      } catch (e) {
+        mostrarError('error-numero', 'Error de conexión');
+      }
+    }
+
+    async function validarPin() {
+      const pin = document.getElementById('pin').value.trim();
+      if (!/^\d{4}$/.test(pin)) {
+        mostrarError('error-pin', 'PIN debe ser 4 dígitos');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user')
+          .select('telefono')
+          .eq('telefono', telefonoActual)
+          .eq('pin', pin)
+          .eq('activo', true)
+          .single();
+
+        if (error || !data) {
+          mostrarError('error-pin', 'PIN incorrecto');
+          return;
+        }
+
+        // ✅ AUTENTICACIÓN EXITOSA
+        localStorage.setItem('usuario_autenticado', telefonoActual);
+        
+        // 👇 SI ES EL ADMIN, REDIRIGE A home.html
+        if (telefonoActual === '3243176042') {
+          window.location.href = 'home.html';
+        } else {
+          showScreen('app');
+          cargarAppPrincipal(); // Aquí cargarías tu app real
+        }
+      } catch (e) {
+        mostrarError('error-pin', 'Error de conexión');
+      }
+    }
+
+    function volverANumero() {
+      showScreen('login-numero');
+      document.getElementById('pin').value = '';
+    }
+
+    function logout() {
+      localStorage.removeItem('usuario_autenticado');
+      showScreen('login-numero');
+      document.getElementById('telefono').value = '';
+    }
+
+    // Al cargar
+    window.onload = () => {
+      const usuario = localStorage.getItem('usuario_autenticado');
+      if (usuario) {
+        telefonoActual = usuario;
+        if (usuario === '3243176042') {
+          window.location.href = 'home.html';
+        } else {
+          showScreen('app');
+          cargarAppPrincipal();
+        }
+      } else {
+        showScreen('login-numero');
+      }
+    };
+
+    // Aquí cargarías tu app real (generar, movimientos, etc.)
+    function cargarAppPrincipal() {
+      // Por ahora, solo muestra un mensaje
+      document.querySelector('#app .card').innerHTML = `
+        <h1>Nequi Generator PRO</h1>
+        <p>¡Bienvenido, ${telefonoActual}!</p>
+        <p>Pronto tendrás acceso a generar comprobantes.</p>
+        <button onclick="logout()">Cerrar sesión</button>
+      `;
+    }
+  </script>
+</body>
+</html>

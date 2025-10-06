@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel de Administración</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0b0b0b;
+      --surface: #151515;
+      --line: #252525;
+      --accent: #00f0ff;
+      --text: #f2f2f2;
+      --sub: #888;
+      --error: #ff4d4d;
+      --ok: #00ff88;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 600px;
+      margin-bottom: 1rem;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+      background: linear-gradient(90deg, var(--accent), #ff00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    label {
+      display: block;
+      margin: 0.5rem 0 0.3rem;
+      color: var(--sub);
+      font-size: 0.9rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0f0f0f;
+      color: var(--text);
+      font-size: 1rem;
+    }
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      margin-top: 1rem;
+      border: none;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .error {
+      color: var(--error);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    .success {
+      color: var(--ok);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
+    }
+    th, td {
+      padding: 0.7rem;
+      text-align: left;
+      border: 1px solid var(--line);
+    }
+    th {
+      background: var(--line);
+    }
+    .status {
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .status-activo {
+      background: var(--ok);
+      color: #000;
+    }
+    .status-inactivo {
+      background: var(--error);
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔒 Panel de Administración</h1>
+    <p>Administra usuarios desde aquí</p>
+    <button onclick="logout()">Cerrar sesión</button>
+  </div>
+
+  <div class="card">
+    <h2>➕ Agregar Usuario</h2>
+    <label>Número (10 dígitos)</label>
+    <input type="tel" id="nuevo-telefono" maxlength="10" placeholder="3101234567" autocomplete="off">
+    <label>PIN (4 dígitos)</label>
+    <input type="password" id="nuevo-pin" maxlength="4" placeholder="1234" autocomplete="off">
+    <button onclick="agregarUsuario()">Agregar usuario</button>
+    <div id="mensaje-agregar" class="hidden"></div>
+  </div>
+
+  <div class="card">
+    <h2>👥 Usuarios Registrados</h2>
+    <div id="usuarios-lista">
+      <p>Cargando...</p>
+    </div>
+  </div>
+
+  <script>
+    // 🔑 CONFIGURACIÓN DE SUPABASE — ¡REEMPLAZA ESTOS VALORES!
+    const supabaseUrl = 'https://TU_PROYECTO.supabase.co';
+    const supabaseAnonKey = 'TU_ANON_KEY';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    // Verificar si el usuario es admin
+    const usuario = localStorage.getItem('usuario_autenticado');
+    if (usuario !== '3243176042') {
+      alert('Acceso denegado');
+      window.location.href = 'login.html';
+    }
+
+    async function cargarUsuarios() {
+      const { data, error } = await supabase
+        .from('user')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        document.getElementById('usuarios-lista').innerHTML = `<p class="error">Error al cargar usuarios</p>`;
+        return;
+      }
+
+      if (data.length === 0) {
+        document.getElementById('usuarios-lista').innerHTML = `<p>No hay usuarios registrados</p>`;
+        return;
+      }
+
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Fecha</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      data.forEach(u => {
+        const estadoClass = u.activo ? 'status-activo' : 'status-inactivo';
+        const estadoText = u.activo ? 'Activo' : 'Inactivo';
+        html += `
+          <tr>
+            <td>${u.telefono}</td>
+            <td>${new Date(u.created_at).toLocaleString()}</td>
+            <td><span class="status ${estadoClass}">${estadoText}</span></td>
+            <td>
+              <button onclick="toggleEstado('${u.id}', ${u.activo})">${u.activo ? 'Desactivar' : 'Activar'}</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      html += `</tbody></table>`;
+      document.getElementById('usuarios-lista').innerHTML = html;
+    }
+
+    async function agregarUsuario() {
+      const tel = document.getElementById('nuevo-telefono').value.trim();
+      const pin = document.getElementById('nuevo-pin').value.trim();
+      const mensaje = document.getElementById('mensaje-agregar');
+
+      if (!/^\d{10}$/.test(tel)) {
+        mostrarMensaje('mensaje-agregar', 'Número debe tener 10 dígitos', false);
+        return;
+      }
+
+      if (!/^\d{4}$/.test(pin)) {
+        mostrarMensaje('mensaje-agregar', 'PIN debe tener 4 dígitos', false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user')
+          .insert({ telefono: tel, pin: pin, activo: true })
+          .select();
+
+        if (error) throw error;
+
+        mostrarMensaje('mensaje-agregar', 'Usuario agregado correctamente', true);
+        document.getElementById('nuevo-telefono').value = '';
+        document.getElementById('nuevo-pin').value = '';
+        cargarUsuarios();
+      } catch (e) {
+        mostrarMensaje('mensaje-agregar', 'Error al agregar usuario', false);
+      }
+    }
+
+    async function toggleEstado(id, estadoActual) {
+      try {
+        const { data, error } = await supabase
+          .from('user')
+          .update({ activo: !estadoActual })
+          .eq('id', id)
+          .select();
+
+        if (error) throw error;
+
+        cargarUsuarios();
+      } catch (e) {
+        alert('Error al cambiar estado');
+      }
+    }
+
+    function mostrarMensaje(id, msg, success = true) {
+      const div = document.getElementById(id);
+      div.textContent = msg;
+      div.className = success ? "success" : "error";
+      div.classList.remove("hidden");
+      setTimeout(() => div.classList.add("hidden"), 5000);
+    }
+
+    function logout() {
+      localStorage.removeItem('usuario_autenticado');
+      window.location.href = 'login.html';
+    }
+
+    window.onload = cargarUsuarios;
+  </script>
+</body>
+</html>

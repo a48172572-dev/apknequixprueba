@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nequi Generator PRO</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#000000">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0b0b0b;
+      --surface: #151515;
+      --line: #252525;
+      --accent: #00f0ff;
+      --text: #f2f2f2;
+      --sub: #888;
+      --error: #ff4d4d;
+      --ok: #00ff88;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, sans-serif;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+      min-height: 100vh;
+    }
+    h1 {
+      font-size: 1.8rem;
+      background: linear-gradient(90deg, var(--accent), #ff00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: transparent;
+      text-align: center;
+    }
+    p {
+      color: var(--sub);
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-size: 0.9rem;
+      color: var(--sub);
+    }
+    input, select {
+      width: 100%;
+      padding: 0.6rem;
+      margin-bottom: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0f0f0f;
+      color: var(--text);
+    }
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 12px;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+    button:hover {
+      box-shadow: 0 0 15px var(--accent);
+    }
+    button:disabled {
+      background: #333;
+      color: #666;
+      cursor: not-allowed;
+    }
+    .error {
+      color: var(--error);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    .success {
+      color: var(--ok);
+      font-size: 0.9rem;
+      margin-top: 0.5rem;
+    }
+    .preview {
+      margin-top: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .preview img {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .tabs {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .tab {
+      flex: 1;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--line);
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+    .tab.active {
+      background: var(--accent);
+      color: #000;
+    }
+    .screen {
+      display: none;
+    }
+    .screen.active {
+      display: block;
+    }
+    .mov-item {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .mov-item a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .mov-item a:hover {
+      text-decoration: underline;
+    }
+
+    /* Modal de comprobante */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      justify-content: center;
+      align-items: center;
+      padding: 2rem;
+    }
+    .modal-content {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 0 30px rgba(0, 240, 255, 0.3);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+    .modal-img {
+      width: 100%;
+      max-height: 70vh;
+      object-fit: contain;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .modal-actions button {
+      flex: 1;
+    }
+
+    /* Login screens */
+    .login-screen {
+      display: none;
+      width: 100%;
+      max-width: 420px;
+    }
+    .login-screen.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <!-- LOGIN: NÚMERO -->
+  <div id="login-numero" class="login-screen active">
+    <div class="card">
+      <h1>🔐 Acceso</h1>
+      <p>Ingresa tu número registrado</p>
+      <label>Número (10 dígitos)</label>
+      <input type="tel" id="telefono-login" maxlength="10" placeholder="3101234567" autocomplete="off">
+      <button onclick="validarNumero()">Continuar</button>
+      <div id="error-numero" class="error"></div>
+    </div>
+  </div>
+
+  <!-- LOGIN: PIN -->
+  <div id="login-pin" class="login-screen">
+    <div class="card">
+      <h1>🔢 Ingresa tu PIN</h1>
+      <label>PIN de 4 dígitos</label>
+      <input type="password" id="pin-login" maxlength="4" placeholder="1234" autocomplete="off">
+      <button onclick="validarPin()">Ingresar</button>
+      <button style="background:#444;margin-top:0.5rem;" onclick="volverANumero()">← Cambiar número</button>
+      <div id="error-pin" class="error"></div>
+    </div>
+  </div>
+
+  <!-- APP PRINCIPAL (PROTEGIDA) -->
+  <div id="app-main" class="screen">
+    <h1>Nequi Generator PRO</h1>
+    <p>Genera comprobantes reales desde tu dispositivo</p>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('generar')">Generar</button>
+      <button class="tab" onclick="showTab('movimientos')">Movimientos</button>
+    </div>
+
+    <!-- GENERAR -->
+    <div id="generar" class="screen active">
+      <div class="card">
+        <label>Tipo</label>
+        <select id="tipo">
+          <option value="nequi">💸 Nequi a Nequi</option>
+          <option value="transfiya">🔄 Transfiya</option>
+          <option value="qr">📱 QR Comprobante</option>
+        </select>
+
+        <div id="extraFields"></div>
+
+        <label>Valor</label>
+        <input type="number" id="valor" min="1" required>
+
+        <button id="btnGenerar" onclick="generar()">Generar</button>
+
+        <div id="mensaje" class="hidden"></div>
+      </div>
+    </div>
+
+    <!-- MOVIMIENTOS -->
+    <div id="movimientos" class="screen">
+      <div class="card">
+        <h3>📊 Movimientos Generados</h3>
+        <div id="movimientosList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PARA VER COMPROBANTE -->
+  <div id="comprobanteModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📄 Comprobante Generado</h3>
+        <button class="modal-close" onclick="cerrarModal()">×</button>
+      </div>
+      <img id="modalImg" class="modal-img" src="" alt="Comprobante">
+      <div class="modal-actions">
+        <button onclick="descargarComprobante()">Descargar</button>
+        <button onclick="cerrarModal()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 🔑 CONFIGURACIÓN DE SUPABASE — ¡REEMPLAZA ESTOS VALORES!
+    const supabaseUrl = 'https://TU_PROYECTO.supabase.co';
+    const supabaseAnonKey = 'TU_ANON_KEY';
+    const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+    // API del backend Flask
+    const API_BASE =
+      window.location.port === "5500"
+        ? "http://127.0.0.1:5000"
+        : `${window.location.origin}`;
+    const API_GEN = `${API_BASE}/api/generate-comprobante`;
+
+    let telefonoActual = '';
+
+    // --- LOGIN ---
+    function mostrarError(id, msg) {
+      document.getElementById(id).textContent = msg;
+      setTimeout(() => document.getElementById(id).textContent = '', 3000);
+    }
+
+    function showLoginScreen(screenId) {
+      document.querySelectorAll('.login-screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    function showApp() {
+      document.querySelectorAll('.login-screen').forEach(s => s.style.display = 'none');
+      document.getElementById('app-main').style.display = 'block';
+    }
+
+    async function validarNumero() {
+      const tel = document.getElementById('telefono-login').value.trim();
+      if (!/^\d{10}$/.test(tel)) {
+        mostrarError('error-numero', 'Ingresa 10 dígitos');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user')
+          .select('telefono')
+          .eq('telefono', tel)
+          .eq('activo', true)
+          .single();
+
+        if (error || !data) {
+          mostrarError('error-numero', 'Número no autorizado');
+          return;
+        }
+
+        telefonoActual = tel;
+        showLoginScreen('login-pin');
+        document.getElementById('pin-login').focus();
+      } catch (e) {
+        mostrarError('error-numero', 'Error de conexión');
+      }
+    }
+
+    async function validarPin() {
+      const pin = document.getElementById('pin-login').value.trim();
+      if (!/^\d{4}$/.test(pin)) {
+        mostrarError('error-pin', 'PIN debe ser 4 dígitos');
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user')
+          .select('telefono')
+          .eq('telefono', telefonoActual)
+          .eq('pin', pin)
+          .eq('activo', true)
+          .single();
+
+        if (error || !data) {
+          mostrarError('error-pin', 'PIN incorrecto');
+          return;
+        }
+
+        // ✅ AUTENTICACIÓN EXITOSA
+        localStorage.setItem('nequi_user', telefonoActual);
+
+        // 👇 SI ES EL ADMIN, REDIRIGE A home.html
+        if (telefonoActual === '3243176042') {
+          window.location.href = 'home.html';
+        } else {
+          showApp();
+          cargarMovimientos();
+        }
+      } catch (e) {
+        mostrarError('error-pin', 'Error de conexión');
+      }
+    }
+
+    function volverANumero() {
+      showLoginScreen('login-numero');
+      document.getElementById('pin-login').value = '';
+    }
+
+    // --- APP PRINCIPAL ---
+    const fields = {
+      nequi: `
+        <label>Nombre completo</label>
+        <input id="nombre" type="text" required>
+        <label>Teléfono (10 dígitos)</label>
+        <input id="telefono" type="tel" pattern="[0-9]{10}" maxlength="10" required>
+      `,
+      transfiya: `
+        <label>Teléfono (10 dígitos)</label>
+        <input id="telefono" type="tel" pattern="[0-9]{10}" maxlength="10" required>
+      `,
+      qr: `
+        <label>Nombre del negocio</label>
+        <input id="nombre" type="text" required>
+      `
+    };
+
+    document.getElementById("tipo")?.addEventListener("change", e => {
+      document.getElementById("extraFields").innerHTML = fields[e.target.value] || "";
+    });
+    document.getElementById("tipo")?.dispatchEvent?.(new Event("change"));
+
+    function showTab(tab) {
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.querySelector(`#${tab}`)?.classList.add("active");
+      const tabIndex = tab === "generar" ? 1 : 2;
+      document.querySelector(`.tab:nth-child(${tabIndex})`)?.classList.add("active");
+    }
+
+    async function generar() {
+      const btn = document.getElementById("btnGenerar");
+      if (!btn) return;
+      btn.disabled = true;
+
+      const tipo = document.getElementById("tipo")?.value;
+      const valor = Number(document.getElementById("valor")?.value);
+      const nombre = document.getElementById("nombre")?.value?.trim();
+      const telefono = document.getElementById("telefono")?.value?.trim();
+
+      const payload = { tipo, valor };
+      if (nombre) payload.nombre = nombre;
+      if (telefono) payload.telefono = telefono;
+
+      try {
+        const res = await fetch(API_GEN, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error("Respuesta inválida del servidor");
+        }
+
+        if (!data.success) throw new Error(data.error || "Error desconocido");
+
+        // Mostrar modal
+        const modalImg = document.getElementById("modalImg");
+        const modal = document.getElementById("comprobanteModal");
+        modalImg.src = `${API_BASE}${data.comprobante.url}`;
+        modal.style.display = "flex";
+
+        // Guardar en localStorage
+        let movs = JSON.parse(localStorage.getItem("movimientos") || "[]");
+        movs.unshift({
+          fecha: data.comprobante.fecha,
+          valor: data.comprobante.valor,
+          nombre: data.comprobante.nombre || "Sin nombre",
+          tipo: data.comprobante.tipo,
+          url: data.comprobante.url,
+          filename: data.comprobante.url.split('/').pop()
+        });
+        localStorage.setItem("movimientos", JSON.stringify(movs));
+
+        mostrarMensaje("✅ Comprobante generado correctamente", true);
+        cargarMovimientos();
+      } catch (e) {
+        mostrarMensaje(`❌ ${e.message}`, false);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function mostrarMensaje(msg, success = true) {
+      const div = document.getElementById("mensaje");
+      if (!div) return;
+      div.textContent = msg;
+      div.className = success ? "success" : "error";
+      div.classList.remove("hidden");
+      setTimeout(() => div.classList.add("hidden"), 5000);
+    }
+
+    function cargarMovimientos() {
+      const container = document.getElementById("movimientosList");
+      if (!container) return;
+      const movs = JSON.parse(localStorage.getItem("movimientos") || "[]");
+      container.innerHTML =
+        movs.length === 0
+          ? "<p>Sin movimientos recientes.</p>"
+          : movs
+              .map(
+                m => `
+            <div class="mov-item">
+              <strong>${m.nombre}</strong><br>
+              ${m.valor} COP<br>
+              ${m.fecha}<br>
+              <a href="${API_BASE}${m.url}" target="_blank">Ver comprobante</a>
+            </div>`
+              )
+              .join("");
+    }
+
+    function cerrarModal() {
+      document.getElementById("comprobanteModal").style.display = "none";
+    }
+
+    function descargarComprobante() {
+      const img = document.getElementById("modalImg");
+      const link = document.createElement("a");
+      link.href = img.src;
+      link.download = img.src.split("/").pop();
+      link.click();
+    }
+
+    // Al cargar
+    window.onload = () => {
+      const user = localStorage.getItem('nequi_user');
+      if (user) {
+        telefonoActual = user;
+        if (user === '3243176042') {
+          window.location.href = 'home.html';
+        } else {
+          showApp();
+          cargarMovimientos();
+        }
+      } else {
+        showLoginScreen('login-numero');
+      }
+    };
+  </script>
+</body>
+</html>
