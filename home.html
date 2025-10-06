@@ -115,16 +115,31 @@
       background: var(--error);
       color: #fff;
     }
+    .hidden {
+      display: none;
+    }
   </style>
 </head>
 <body>
-  <div class="card">
+  <!-- Pantalla de login -->
+  <div id="login-screen" class="card">
+    <h1>🔒 Iniciar Sesión</h1>
+    <label>Número (10 dígitos)</label>
+    <input type="tel" id="login-telefono" maxlength="10" placeholder="3101234567" autocomplete="off">
+    <label>PIN (4 dígitos)</label>
+    <input type="password" id="login-pin" maxlength="4" placeholder="1234" autocomplete="off">
+    <button onclick="iniciarSesion()">Ingresar</button>
+    <div id="mensaje-login" class="hidden"></div>
+  </div>
+
+  <!-- Panel principal (oculto hasta que inicie sesión) -->
+  <div id="panel-admin" class="card" style="display: none;">
     <h1>🔒 Panel de Administración</h1>
     <p>Administra usuarios desde aquí</p>
     <button onclick="logout()">Cerrar sesión</button>
   </div>
 
-  <div class="card">
+  <div id="panel-agregar" class="card" style="display: none;">
     <h2>➕ Agregar Usuario</h2>
     <label>Número (10 dígitos)</label>
     <input type="tel" id="nuevo-telefono" maxlength="10" placeholder="3101234567" autocomplete="off">
@@ -134,7 +149,7 @@
     <div id="mensaje-agregar" class="hidden"></div>
   </div>
 
-  <div class="card">
+  <div id="panel-usuarios" class="card" style="display: none;">
     <h2>👥 Usuarios Registrados</h2>
     <div id="usuarios-lista">
       <p>Cargando...</p>
@@ -143,15 +158,61 @@
 
   <script>
     // 🔑 CONFIGURACIÓN DE SUPABASE — ¡REEMPLAZA ESTOS VALORES!
-    const supabaseUrl = 'https://TU_PROYECTO.supabase.co';
-    const supabaseAnonKey = 'TU_ANON_KEY';
+    const supabaseUrl = 'https://a48i72572-dev.supabase.co'; // 👈 TU URL REAL
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImE0OGk3MjU3Mi1kZXYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczMDQxNjg5MSwiZXhwIjoyMDQ1OTkyODkxfQ.XXXXXXX'; // 👈 TU CLAVE REAL
     const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
-    // Verificar si el usuario es admin
-    const usuario = localStorage.getItem('usuario_autenticado');
-    if (usuario !== '3243176042') {
-      alert('Acceso denegado');
-      window.location.href = 'login.html';
+    // Función para iniciar sesión
+    async function iniciarSesion() {
+      const tel = document.getElementById('login-telefono').value.trim();
+      const pin = document.getElementById('login-pin').value.trim();
+      const mensaje = document.getElementById('mensaje-login');
+
+      if (!/^\d{10}$/.test(tel)) {
+        mostrarMensaje('mensaje-login', 'Número debe tener 10 dígitos', false);
+        return;
+      }
+
+      if (!/^\d{4}$/.test(pin)) {
+        mostrarMensaje('mensaje-login', 'PIN debe tener 4 dígitos', false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('user')
+          .select('*')
+          .eq('telefono', tel)
+          .eq('pin', pin)
+          .maybeSingle(); // Solo uno o ninguno
+
+        if (error) throw error;
+
+        if (!data) {
+          mostrarMensaje('mensaje-login', 'Número o PIN incorrectos', false);
+          return;
+        }
+
+        if (!data.activo) {
+          mostrarMensaje('mensaje-login', 'Usuario inactivo', false);
+          return;
+        }
+
+        // Guardar en localStorage para mantener la sesión
+        localStorage.setItem('usuario_autenticado', tel);
+        mostrarMensaje('mensaje-login', '✅ Bienvenido!', true);
+
+        // Mostrar panel
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('panel-admin').style.display = 'block';
+        document.getElementById('panel-agregar').style.display = 'block';
+        document.getElementById('panel-usuarios').style.display = 'block';
+
+        cargarUsuarios();
+
+      } catch (e) {
+        mostrarMensaje('mensaje-login', 'Error al iniciar sesión', false);
+      }
     }
 
     async function cargarUsuarios() {
@@ -260,10 +321,33 @@
 
     function logout() {
       localStorage.removeItem('usuario_autenticado');
-      window.location.href = 'login.html';
+      window.location.reload(); // Recarga para volver al login
     }
 
-    window.onload = cargarUsuarios;
+    // Verificar si ya hay sesión activa
+    window.onload = function() {
+      const usuario = localStorage.getItem('usuario_autenticado');
+      if (usuario) {
+        // Verificar si el usuario sigue activo
+        supabase
+          .from('user')
+          .select('activo')
+          .eq('telefono', usuario)
+          .maybeSingle()
+          .then(({ data, error }) => {
+            if (error || !data || !data.activo) {
+              localStorage.removeItem('usuario_autenticado');
+              return;
+            }
+            // Mostrar panel
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('panel-admin').style.display = 'block';
+            document.getElementById('panel-agregar').style.display = 'block';
+            document.getElementById('panel-usuarios').style.display = 'block';
+            cargarUsuarios();
+          });
+      }
+    };
   </script>
 </body>
 </html>
